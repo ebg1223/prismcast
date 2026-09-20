@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Living Plan</title>
+<!--
+  LIVING PLAN. This file is the plan, runbook, status board, and the live
+  contract between humans and agents for this project.
+
+  To update: edit the DATA object below ONLY. Rendering is generic; sections
+  with no data are omitted automatically.
+
+  Conventions:
+    status: "done" | "live" | "in_progress" | "designed" | "not_started"
+            | "blocked" | "ruled" | "open"
+    Every item cites its source (doc, PR, commit, run id) in details/ref.
+    Append to DATA.updateLog on every edit (newest first). Never delete
+    history — change statuses instead.
+-->
+<script>
+const DATA = {
+  "meta": {
+    "title": "YouTube TV schedules for Emby",
+    "subtitle": "Match real game listings to Prismcast streams and publish XMLTV.",
+    "asOf": "2026-09-20",
+    "sources": "Source code, live guide inspection, embedded runbook"
+  },
+  "orientation": {
+    "what": "Read program information from the signed-in YouTube TV guide and give Emby a schedule feed. Keep schedules attached to the selectors used for tuning.",
+    "why": "The nine Sunday Ticket streams work, but Emby's guide sources do not offer obvious matching stations.",
+    "how": [
+      "Inspect real titles and timestamps",
+      "Implement extraction and XMLTV",
+      "Verify output and publish through CI"
+    ],
+    "principles": [
+      "Never invent game assignments or times",
+      "Leave the repository Dockerfile unchanged"
+    ],
+    "whereWeAre": "Live extraction returned nine Sunday Ticket games with exact timestamps. XMLTV implementation and focused tests pass; container publication is next.",
+    "glossary": [
+      {
+        "term": "XMLTV",
+        "def": "An XML file describing channels and timed programs that Emby can import."
+      },
+      {
+        "term": "Selector",
+        "def": "The channel name and occurrence used to choose a stream."
+      }
+    ]
+  },
+  "milestones": [
+    {
+      "id": "M1",
+      "name": "Verify live program data",
+      "status": "done",
+      "pct": 100,
+      "summary": "Verified nine real game listings.",
+      "plain": "Find titles and exact times. Base extraction on observed markup.",
+      "details": "Controller data exposes title.runs, beginTimeMs and endTimeMs. See embedded runbook."
+    },
+    {
+      "id": "M2",
+      "name": "Extract and publish XMLTV",
+      "status": "done",
+      "pct": 100,
+      "summary": "GET /xmltv.xml is implemented.",
+      "plain": "Preserve channel identity and emit real schedules. Missing data remains missing.",
+      "details": "Configured IDs/numbers and occurrence selectors share tuning identity. Fifteen-minute cache, serialized refreshes, bounded stale fallback."
+    },
+    {
+      "id": "M3",
+      "name": "Verify and publish",
+      "status": "in_progress",
+      "pct": 50,
+      "summary": "Test output and publish through Actions.",
+      "plain": "Run focused tests and inspect real output. Publish the dev image after validation.",
+      "details": "Existing CI builds the checked-out source."
+    }
+  ],
+  "nextActions": [
+    {
+      "pri": 1,
+      "action": "Publish validated source through GitHub Actions",
+      "ref": "CI workflow on codex/yttv-channel-occurrences"
+    }
+  ],
+  "decisions": {
+    "ruled": [
+      {
+        "name": "Generate Dockerfile in CI only",
+        "ref": "User instruction"
+      }
+    ],
+    "open": []
+  },
+  "updateLog": [
+    {
+      "date": "2026-09-20",
+      "note": "Live nine-game extraction passed; 20 focused tests pass. Concurrency review finding fixed. Debug access restored."
+    },
+    {
+      "date": "2026-09-20",
+      "note": "Created guide extraction plan."
+    }
+  ]
+};
+</script>
+<style>
+  :root {
+    --bg: #f7f8fa; --panel: #ffffff; --panel2: #eef0f4; --border: #d8dce4;
+    --text: #21262f; --muted: #5f6775; --accent: #2f6fb2;
+    --done: #1e8a5e; --live: #1f9d68; --prog: #a8760a; --design: #5364b8;
+    --not: #8a91a0; --blocked: #bd4a4a; --ruled: #1e8a5e; --open: #a8760a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+  header h1 { margin: 0 0 2px; font-size: 24px; }
+  header .sub { color: var(--muted); margin-bottom: 4px; }
+  header .asof { color: var(--accent); font-size: 13px; }
+  h2 { font-size: 17px; margin: 34px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .cap { color: var(--muted); font-size: 12.5px; margin: -8px 0 12px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; cursor: pointer; }
+  .card .v { font-size: 20px; font-weight: 700; }
+  .card .l { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .card .d { color: var(--muted); font-size: 11px; margin-top: 6px; display: none; }
+  .card.exp .d { display: block; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .st-done, .st-ruled { background: rgba(30,138,94,.12); color: var(--done); }
+  .st-live { background: rgba(31,157,104,.14); color: var(--live); }
+  .st-in_progress { background: rgba(168,118,10,.12); color: var(--prog); }
+  .st-designed { background: rgba(83,100,184,.12); color: var(--design); }
+  .st-not_started { background: rgba(138,145,160,.18); color: #6b7280; }
+  .st-blocked { background: rgba(189,74,74,.12); color: var(--blocked); }
+  .st-open { background: rgba(168,118,10,.12); color: var(--open); }
+  .bar { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  details { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+  details summary { cursor: pointer; padding: 11px 14px; display: flex; align-items: center; gap: 10px; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: "▸"; color: var(--muted); font-size: 11px; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  .body { padding: 0 16px 14px 32px; color: var(--muted); font-size: 13px; }
+  .name { font-weight: 600; flex: 0 0 auto; }
+  .sumtext { color: var(--muted); font-size: 12.5px; flex: 1; }
+  .mbar { flex: 0 0 90px; }
+  .item { padding: 8px 0; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: baseline; }
+  .item:first-child { border-top: none; }
+  .item .iname { flex: 0 0 300px; color: var(--text); font-size: 13px; }
+  .item .idetail { color: var(--muted); font-size: 12.5px; }
+  ul.ev { margin: 6px 0 0; padding-left: 18px; }
+  ul.ev li { margin: 3px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--panel2); vertical-align: top; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .ref { color: var(--accent); font-size: 11.5px; white-space: nowrap; }
+  code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 800px) { .cols2 { grid-template-columns: 1fr; } .item { flex-wrap: wrap; } .item .iname { flex-basis: 100%; } }
+  .toolbar { margin: 10px 0 16px; display: flex; gap: 8px; }
+  .toolbar button { background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 12px; }
+  .toolbar button:hover { color: var(--text); border-color: var(--accent); }
+  .log { color: var(--muted); font-size: 12px; }
+  .log b { color: var(--text); }
+  .pri { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center;
+    border-radius: 50%; font-size: 11px; font-weight: 700; background: var(--panel2); }
+  .pri1 { color: var(--blocked); } .pri2 { color: var(--prog); } .pri3 { color: var(--muted); }
+  .prose { color: var(--text); font-size: 13.5px; max-width: 850px; }
+  .prose p { margin: 6px 0; }
+  .pipe { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .pipe span { background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 10px; font-size: 12px; }
+  .pipe span b { color: var(--accent); }
+  .pipe .arrow { border: none; background: none; align-self: center; color: var(--muted); }
+  .gloss { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 4px 18px; font-size: 12.5px; }
+  .gloss div { padding: 3px 0; }
+  .gloss b { color: var(--text); }
+  .gloss span { color: var(--muted); }
+  ul.tight { margin: 6px 0; padding-left: 18px; }
+  ul.tight li { margin: 3px 0; }
+  .plain { color: var(--text); font-size: 13px; margin: 8px 0; }
+  .rec { color: var(--muted); font-size: 12.5px; margin: 8px 0 2px; }
+  .md { color: var(--text); }
+  .md p { margin: 6px 0; }
+  .md h3, .md h4, .md h5, .md h6 { margin: 16px 0 6px; }
+  .md pre { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; overflow-x: auto; font-size: 12px; line-height: 1.45; }
+  .md table { margin: 8px 0; }
+  .md li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"></div>
+
+<script>
+// ---- Generic renderer. Do not put content here; edit DATA above. ----
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const pill = (s) => `<span class="pill st-${esc(s)}">${esc(String(s).replace(/_/g, " "))}</span>`;
+const has = (x) => Array.isArray(x) ? x.length > 0 : !!x;
+const out = [];
+const section = (title, caption, html) => {
+  if (!html) return;
+  out.push(`<h2>${esc(title)}</h2>${caption ? `<div class="cap">${esc(caption)}</div>` : ""}${html}`);
+};
+
+// Header
+out.push(`<header>
+  <h1>${esc(DATA.meta.title)} — Living Plan</h1>
+  <div class="sub">${esc(DATA.meta.subtitle || "")}</div>
+  <div class="asof">As of ${esc(DATA.meta.asOf)}${DATA.meta.sources ? ` · Sources: ${esc(DATA.meta.sources)}` : ""}</div>
+</header>`);
+
+// Orientation
+if (has(DATA.orientation)) {
+  const o = DATA.orientation;
+  const pipe = (o.how || []).map(s => {
+    const [word, ...rest] = s.split(" — ");
+    return `<span><b>${esc(word)}</b>${rest.length ? " — " + esc(rest.join(" — ")) : ""}</span>`;
+  }).join('<span class="arrow">→</span>');
+  section("Start Here", null, `
+    <div class="prose">
+      ${o.what ? `<p><b>What this is.</b> ${esc(o.what)}</p>` : ""}
+      ${o.why ? `<p><b>Why.</b> ${esc(o.why)}</p>` : ""}
+      ${pipe ? `<p><b>How it works.</b></p><div class="pipe">${pipe}</div>` : ""}
+      ${has(o.principles) ? `<p><b>Ground rules.</b></p><ul class="tight">${o.principles.map(p => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+      ${o.whereWeAre ? `<p><b>Where we are.</b> ${esc(o.whereWeAre)}</p>` : ""}
+    </div>
+    ${has(o.glossary) ? `<details style="margin-top:10px">
+      <summary><span class="name">Glossary</span><span class="sumtext">terms used throughout this document</span></summary>
+      <div class="body"><div class="gloss">
+        ${o.glossary.map(g => `<div><b>${esc(g.term)}</b> — <span>${esc(g.def)}</span></div>`).join("")}
+      </div></div>
+    </details>` : ""}`);
+}
+
+// Headline
+if (has(DATA.headline)) {
+  section("Headline", null, `<div class="cards">${DATA.headline.map(h => `
+    <div class="card" onclick="this.classList.toggle('exp')">
+      <div class="v">${esc(h.value)}</div>
+      <div class="l">${esc(h.label)}</div>
+      ${h.detail ? `<div class="d">${esc(h.detail)}</div>` : ""}
+    </div>`).join("")}</div>`);
+}
+
+// Milestones
+if (has(DATA.milestones)) {
+  section("Milestones", "The build arc, in order. Each bar = how complete. Click to expand.",
+    `<div class="toolbar">
+      <button onclick="document.querySelectorAll('details').forEach(d=>d.open=true)">Expand all</button>
+      <button onclick="document.querySelectorAll('details').forEach(d=>d.open=false)">Collapse all</button>
+    </div>` +
+    DATA.milestones.map(m => `
+    <details>
+      <summary>
+        <span class="name">${esc(m.id)} · ${esc(m.name)}</span>
+        ${pill(m.status)}
+        <span class="sumtext">${esc(m.summary || "")}</span>
+        <span class="mbar"><span class="bar"><i style="width:${Number(m.pct) || 0}%"></i></span></span>
+      </summary>
+      <div class="body">
+        ${m.plain ? `<p class="plain">${esc(m.plain)}</p>` : ""}
+        ${m.details ? `<p class="rec"><b>Record:</b> ${esc(m.details)}</p>` : ""}
+      </div>
+    </details>`).join(""));
+}
+
+// Tracks
+if (has(DATA.tracks)) {
+  section("Workstreams", "The runbook layer: where day-to-day work lives. Click to expand.",
+    DATA.tracks.map(t => `
+    <details>
+      <summary>
+        <span class="name">${esc(t.id)} · ${esc(t.name)}</span>
+        ${pill(t.status)}
+        <span class="sumtext">${esc(t.summary || "")}</span>
+      </summary>
+      <div class="body">
+        ${t.plain ? `<p class="plain">${esc(t.plain)}</p>` : ""}
+        ${(t.items || []).map(i => `
+          <div class="item">
+            <span class="iname">${esc(i.name)}</span>
+            ${pill(i.status)}
+            <span class="idetail">${esc(i.detail || "")}</span>
+          </div>`).join("")}
+      </div>
+    </details>`).join(""));
+}
+
+// Next actions
+if (has(DATA.nextActions)) {
+  section("Next Actions", "Concrete queue, priority 1 = do next.",
+    `<table><thead><tr><th></th><th>Action</th><th>Ref</th></tr></thead><tbody>${
+      DATA.nextActions.map(a => `<tr><td><span class="pri pri${a.pri}">${a.pri}</span></td><td>${esc(a.action)}</td><td class="ref">${esc(a.ref || "")}</td></tr>`).join("")
+    }</tbody></table>`);
+}
+
+// Metric timeline (optional)
+if (DATA.metricTimeline && has(DATA.metricTimeline.rows)) {
+  const mt = DATA.metricTimeline;
+  section(mt.title || "Metric Timeline", mt.caption,
+    `<table><thead><tr>${mt.columns.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${
+      mt.rows.map(r => `<tr>${r.map((c, i) => `<td${i >= 2 ? ' class="num"' : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")
+    }</tbody></table>`);
+}
+
+// Phases
+if (has(DATA.phases)) {
+  section("Execution History", "How we got here, phase by phase. Append-only.",
+    DATA.phases.map(p => `
+    <details>
+      <summary>
+        <span class="name">${esc(p.name)}</span>
+        ${pill(p.status)}
+        <span class="sumtext">${p.docs ? `${esc(p.docs)} · ` : ""}${esc(p.date || "")}${p.summary ? ` — ${esc(p.summary)}` : ""}</span>
+      </summary>
+      <div class="body"><ul class="ev">${(p.events || []).map(e => `<li>${esc(e)}</li>`).join("")}</ul></div>
+    </details>`).join(""));
+}
+
+// Decisions
+if (DATA.decisions && (has(DATA.decisions.ruled) || has(DATA.decisions.open))) {
+  const row = (d, st) => `<div class="item"><span class="iname" style="flex:1">${esc(d.name)}</span>${pill(st)}<span class="ref">${esc(d.ref || "")}</span></div>`;
+  section("Decisions — the contract", "Ruled = settled and binding; agents must not act against these. Open = awaiting a human; agents must not silently resolve these.",
+    `<div class="cols2">
+      <div><h3 style="font-size:14px;margin:6px 0;">Ruled</h3>${(DATA.decisions.ruled || []).map(d => row(d, "ruled")).join("")}</div>
+      <div><h3 style="font-size:14px;margin:6px 0;">Open</h3>${(DATA.decisions.open || []).map(d => row(d, "open")).join("")}</div>
+    </div>`);
+}
+
+// Contracts (optional)
+if (has(DATA.contracts)) {
+  section("Standing Contracts", "Safety/architecture rules in force, with live status.",
+    DATA.contracts.map(c => `
+    <details>
+      <summary><span class="name">${esc(c.id)} · ${esc(c.name)}</span>${pill(c.status)}</summary>
+      <div class="body">${esc(c.detail || "")}</div>
+    </details>`).join(""));
+}
+
+// Code map (optional)
+if (has(DATA.codeMap)) {
+  section("Code Map", "Where the implementation lives.",
+    `<table><thead><tr><th>Area</th><th>Path</th><th>Status</th></tr></thead><tbody>${
+      DATA.codeMap.map(c => `<tr><td>${esc(c.area)}</td><td><code>${esc(c.path)}</code></td><td>${pill(c.status)}</td></tr>`).join("")
+    }</tbody></table>`);
+}
+
+// Update log
+if (has(DATA.updateLog)) {
+  section("Update Log", "Changelog of this document itself.",
+    `<div class="log">${DATA.updateLog.map(u => `<div><b>${esc(u.date)}</b> — ${esc(u.note)}</div>`).join("")}</div>`);
+}
+
+document.getElementById("root").innerHTML = out.join("\n");
+document.title = DATA.meta.title + " — Living Plan";
+
+// Runbook viewer — hidden by default; markdown rendered lazily on first open.
+window.addEventListener("DOMContentLoaded", () => {
+  const src = document.getElementById("runbook");
+  const md = src && src.textContent.replace(/<\\\//g, "</").trim();
+  if (!md) return;
+  const root = document.getElementById("root");
+  const d = document.createElement("details");
+  d.innerHTML = `<summary><span class="name">Runbook</span><span class="sumtext">operational log — commands, verification, session notes. Click to open.</span></summary><div class="body md"></div>`;
+  root.insertAdjacentHTML("beforeend", `<h2>Runbook</h2><div class="cap">Embedded operational record (read/append via plan-data runbook).</div>`);
+  root.appendChild(d);
+  d.addEventListener("toggle", () => {
+    if (!d.open || d.dataset.done) return;
+    d.dataset.done = "1";
+    d.querySelector(".md").innerHTML = mdRender(md);
+  }, { once: false });
+});
+
+// Minimal markdown → HTML (headings, fences, tables, lists, bold/italic/code, links).
+function mdRender(md) {
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/(^|\W)\*([^*\s][^*]*)\*(?=\W|$)/g, "$1<i>$2</i>")
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
+  const out = [];
+  const lines = md.split("\n");
+  let i = 0;
+  const listRe = /^(\s*)([-*]|\d+\.)\s+(.*)$/;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^```/.test(l)) {
+      const buf = [];
+      for (i++; i < lines.length && !/^```/.test(lines[i]); i++) buf.push(lines[i]);
+      i++;
+      out.push(`<pre>${esc(buf.join("\n"))}</pre>`);
+    } else if (/^#{1,6}\s/.test(l)) {
+      const n = Math.min(l.match(/^#+/)[0].length + 2, 6);
+      out.push(`<h${n}>${inline(l.replace(/^#+\s*/, ""))}</h${n}>`);
+      i++;
+    } else if (/^\|/.test(l)) {
+      const rows = [];
+      for (; i < lines.length && /^\|/.test(lines[i]); i++) rows.push(lines[i]);
+      const cells = (r) => r.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const body = rows.filter(r => !/^\|[\s:|-]+\|?$/.test(r));
+      out.push(`<table><thead><tr>${cells(body[0]).map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${
+        body.slice(1).map(r => `<tr>${cells(r).map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+    } else if (listRe.test(l)) {
+      const tag = /^\s*\d+\./.test(l) ? "ol" : "ul";
+      const items = [];
+      for (; i < lines.length && (listRe.test(lines[i]) || /^\s{2,}\S/.test(lines[i])); i++) {
+        const m = lines[i].match(listRe);
+        if (m) items.push(m[3]);
+        else items[items.length - 1] += " " + lines[i].trim();
+      }
+      out.push(`<${tag} class="tight">${items.map(t => `<li>${inline(t)}</li>`).join("")}</${tag}>`);
+    } else if (l.trim() === "") {
+      i++;
+    } else {
+      const buf = [];
+      for (; i < lines.length && lines[i].trim() && !/^(```|#|\||(\s*([-*]|\d+\.)\s))/.test(lines[i]); i++) buf.push(lines[i]);
+      out.push(`<p>${inline(buf.join(" "))}</p>`);
+    }
+  }
+  return out.join("\n");
+}
+</script>
+<script type="text/markdown" id="runbook">
+## 2026-09-20 implementation and live verification
+- Inspected signed-in YouTube TV through the container's CDP debug proxy. Read each `ytu-epg-airing.polymerController.data` using inherited property access. Real `beginTimeMs` and `endTimeMs` are epoch strings; `title.runs` provides untruncated game names.
+- `node /tmp/prismcast-verify-schedule.mjs` attached a separate page, called the production `discoverYttvSchedule` and `renderXmltv`, and closed that page/disconnected. Nine numbered streams produced real titles/times. Examples: FOX [1] Minnesota Vikings at Chicago Bears; FOX [2] Seattle Seahawks at Arizona Cardinals; CBS [1] New Orleans Saints at Baltimore Ravens. Output `/tmp/prismcast-live-guide.xml` is a local verification artifact, not deployed output.
+- Guide order changes as games finish. Schedules and watch URLs are populated together from one read to preserve occurrence identity. No multi-day schedule is claimed.
+- `node --test --test-force-exit src/browser/tuning/youtubeTvGuide.test.ts src/browser/tuning/youtubeTv.test.ts src/guide/xmltv.test.ts src/routes/xmltv.test.ts`: 20 tests passed.
+- `npm run prepublishOnly`: lint, TypeScript and build passed before final documentation updates; final rerun recorded below.
+- Independent review found changed-selection refreshes could overlap after waiting on an earlier request. Replaced one-time wait with a loop.
+- Restored debug pattern to its original empty value using `curl -X POST --data-urlencode 'pattern=' http://10.7.12.56:5589/debug`. Temporary inspection pages closed.
+- Endpoint after deployment: `http://10.7.12.56:5589/xmltv.xml`. Add as an XMLTV source assigned to PrismCast in Emby. Initial scan may take up to one minute; subsequent requests cache for 15 minutes. `?refresh=true` forces extraction.
+- Recovery: remove this XMLTV source from Emby or roll back the container image if provider markup changes. Streaming integration remains independently usable. Do not alter the checked-in Dockerfile; Actions builds the fork using its generated Dockerfile.ci.
+</script>
+</body>
+</html>

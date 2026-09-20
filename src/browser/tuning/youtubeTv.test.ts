@@ -13,14 +13,15 @@
  */
 import type { ChannelSelectionProfile, DiscoveredChannel, Nullable } from "../../types/index.ts";
 import { afterEach, describe, test } from "node:test";
+import { discoverYttvSchedule, yttvProvider } from "./youtubeTv.ts";
 import type { Page } from "puppeteer-core";
 import assert from "node:assert/strict";
 import { makeProfile } from "../../config/profiles.helpers.ts";
-import { yttvProvider } from "./youtubeTv.ts";
 
 // One raw guide row as the strategy reads it out of the EPG grid: the name carried in the thumbnail's aria-label, and the relative watch path from its anchor.
 interface GuideRow {
 
+  readonly programs?: { endMs: number; startMs: number; title: string }[];
   readonly name: string;
   readonly watchPath: string;
 }
@@ -316,4 +317,21 @@ describe("channel cache lifecycle", () => {
 
     assert.equal(yttvProvider.getCachedChannels(), null, "a cleared cache reports that no enumeration has happened rather than an empty lineup");
   });
+});
+
+
+test("schedule occurrences and tuning URLs share identity, including the bare-name alias", async () => {
+
+  const first = [{ endMs: 2000, startMs: 1000, title: "First game" }];
+  const second = [{ endMs: 4000, startMs: 3000, title: "Second game" }];
+  const guide = makeGuidePage([
+    { name: "NFL ST - FOX", programs: first, watchPath: "watch/first" },
+    { name: "NFL ST - FOX", programs: second, watchPath: "watch/second" }
+  ]);
+  const schedule = await discoverYttvSchedule(guide.page, ["NFL ST - FOX"]);
+
+  assert.deepEqual(schedule.get("nfl st - fox [1]"), first);
+  assert.deepEqual(schedule.get("nfl st - fox [2]"), second);
+  assert.deepEqual(schedule.get("nfl st - fox"), first);
+  assert.equal(await yttvProvider.strategy.resolveDirectUrl?.("NFL ST - FOX [2]", guide.page), "https://tv.youtube.com/watch/second");
 });

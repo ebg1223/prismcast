@@ -159,6 +159,13 @@ prismcast service uninstall # Remove the service
 
 That's it! Your channels will appear in the Channels DVR guide. Channels with a channel number configured in PrismCast will include it in the playlist for guide mapping.
 
+### YouTube TV program guide
+
+This fork publishes observed YouTube TV schedules at `http://<your-prismcast-host>:5589/xmltv.xml`. In Emby, add an XMLTV guide source with this URL and assign it to the PrismCast tuner. Channel IDs and numbers match PrismCast's playlist and HDHomeRun lineup, including numbered Sunday Ticket feeds.
+
+YouTube TV must be signed in. The first request opens a temporary muted guide window; results are cached for 15 minutes. Add `?refresh=true` to request a fresh scan. Only programs loaded in the provider's guide are available, so this is not a guaranteed multi-day schedule. Other providers are not included. Failed refreshes use cached data only while a selected channel still has an unexpired program; otherwise the endpoint returns HTTP 503.
+
+
 ## Quick Start with Plex
 
 PrismCast includes builtin HDHomeRun emulation, allowing Plex to discover it as a network tuner.

@@ -7,8 +7,11 @@ import { LOG, evaluateWithAbort, formatError } from "../../utils/index.ts";
 import { attemptGuideRecovery, createEmptyDiscoveryGuard, logAvailableChannels } from "./shared.ts";
 import { createProviderChannelCache, dedupeCacheEntries } from "./cache.ts";
 import { CONFIG } from "../../config/index.ts";
+import type { GuideProgram } from "../../guide/xmltv.ts";
 import type { Page } from "puppeteer-core";
 import type { PersistedLineupChannel } from "../../config/providerLineups.ts";
+import type { YttvGuideChannel } from "./youtubeTvGuide.ts";
+import { readYttvGuide } from "./youtubeTvGuide.ts";
 
 // Base URL for YouTube TV watch page navigation.
 const YOUTUBE_TV_BASE_URL = "https://tv.youtube.com";
@@ -19,6 +22,7 @@ const YOUTUBE_TV_BASE_URL = "https://tv.youtube.com";
 interface YttvChannelEntry {
 
   discovered: DiscoveredChannel;
+  programs: GuideProgram[];
   watchUrl: string;
 }
 
@@ -152,33 +156,31 @@ function exportYttvLineup(): Nullable<PersistedLineupChannel[]> {
  * @param page - The Puppeteer page object positioned on the YouTube TV live guide.
  * @returns Array of discovered channel names and watch paths.
  */
-async function discoverGuideChannels(page: Page): Promise<{ name: string; watchPath: string }[]> {
+async function discoverGuideChannels(page: Page): Promise<YttvGuideChannel[]> {
 
-  return await evaluateWithAbort(page, (): { name: string; watchPath: string }[] => {
+  return await evaluateWithAbort(page, readYttvGuide, []);
+}
 
-    const results: { name: string; watchPath: string }[] = [];
+/** Refreshes schedules and tuning URLs from one guide snapshot, preserving identical occurrence numbering. */
+export async function discoverYttvSchedule(page: Page, selectors: readonly string[] = []): Promise<ReadonlyMap<string, GuideProgram[]>> {
 
-    for(const thumb of Array.from(document.querySelectorAll("ytu-endpoint.tenx-thumb[aria-label]"))) {
+  await page.waitForSelector("ytu-epg-row", { timeout: CONFIG.streaming.videoTimeout });
 
-      const label = thumb.getAttribute("aria-label") ?? "";
+  const channels = await discoverGuideChannels(page);
 
-      if(!label.startsWith("watch ")) {
+  if(!channels.some((channel) => (channel.programs?.length ?? 0) > 0)) {
 
-        continue;
-      }
+    throw new Error("YouTube TV returned no timed programs. Check sign-in and guide availability.");
+  }
 
-      const anchor = thumb.querySelector("a");
-      const href = anchor?.getAttribute("href") ?? "";
+  populateYttvChannelCache(channels);
 
-      // Only include channels with streamable watch URLs. Channels with "live" or "browse/" hrefs are premium add-ons or info pages.
-      if(href.startsWith("watch/")) {
+  for(const selector of selectors) {
 
-        results.push({ name: label.slice(6), watchPath: href });
-      }
-    }
+    findWatchUrl(selector);
+  }
 
-    return results;
-  }, []);
+  return new Map([...yttvCache.map].map(([ selector, entry ]) => [ selector, entry.programs ]));
 }
 
 // Broadcast network names that have local affiliates displayed as "{Network} {Number}" (e.g., "NBC 5", "ABC 7") in the YouTube TV guide. Used to constrain
@@ -196,7 +198,7 @@ const YTTV_AFFILIATE_PATTERN = /^(.+?) \d/;
  * (tuning-time population) and discoverYttvChannels (discovery endpoint).
  * @param rawChannels - Array of channel names and watch paths from discoverGuideChannels().
  */
-function populateYttvChannelCache(rawChannels: { name: string; watchPath: string }[]): void {
+function populateYttvChannelCache(rawChannels: YttvGuideChannel[]): void {
 
   // Every caller hands us a complete read of the non-virtualized guide grid, so the cache mirrors that read rather than accumulating the union of every lineup a
   // browser session has seen. A channel the provider has dropped is absent from the next read, and starting from an empty cache is what keeps it out. The tiered
@@ -263,7 +265,7 @@ function populateYttvChannelCache(rawChannels: { name: string; watchPath: string
         entry.name = entry.channelSelector;
       }
 
-      const cached = { discovered: entry, watchUrl: YOUTUBE_TV_BASE_URL + "/" + ch.watchPath };
+      const cached = { discovered: entry, programs: ch.programs ?? [], watchUrl: YOUTUBE_TV_BASE_URL + "/" + ch.watchPath };
 
       yttvCache.map.set(channels.length > 1 ? entry.channelSelector.toLowerCase() : name, cached);
 

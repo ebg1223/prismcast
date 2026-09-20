@@ -569,6 +569,15 @@ export function generateApiReferenceContent(): string {
     "</table>",
     "</div>",
 
+    // Observed YouTube TV program guide.
+    "<div class=\"section\">",
+    "<h3>Program guide</h3>",
+    "<p><a href=\"/xmltv.xml\"><code>GET /xmltv.xml</code></a> publishes timed programs for configured YouTube TV channels. " +
+    "Use this URL as an XMLTV guide source in Emby. Channel IDs and numbers match the PrismCast tuner lineup. " +
+    "Requires YouTube TV sign-in. The first request opens a temporary muted guide window; results are cached for 15 minutes. " +
+    "Use <code>?refresh=true</code> to rescan. Only programs loaded in the provider guide are included, not a guaranteed multi-day schedule.</p>",
+    "</div>",
+
     // Channel endpoints.
     "<div class=\"section\">",
     "<h3 id=\"api-channels\">Channels</h3>",

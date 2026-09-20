@@ -20,6 +20,7 @@ import { setupRootEndpoint } from "./root/index.ts";
 import { setupServicesEndpoint } from "./services.ts";
 import { setupStreamsEndpoint } from "./streams.ts";
 import { setupUpgradeEndpoint } from "./upgrade.ts";
+import { setupXmltvEndpoint } from "./xmltv.ts";
 
 /* This module aggregates all route setup functions and provides a single function to configure all HTTP endpoints on the Express application.
  */
@@ -47,4 +48,5 @@ export function setupRoutes(app: Express): void {
   setupRootEndpoint(app);
   setupStreamsEndpoint(app);
   setupUpgradeEndpoint(app);
+  setupXmltvEndpoint(app);
 }

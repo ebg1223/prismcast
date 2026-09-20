@@ -43,6 +43,36 @@ jobs:
       - name: Checkout the repository.
         uses: actions/checkout@v6
 
+      - name: Set up Node.js to build the checked-out source.
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build and package the checked-out source.
+        run: |
+          npm ci
+          npm run build
+          mkdir .ci-package
+          npm pack --ignore-scripts --pack-destination .ci-package
+          mv .ci-package/*.tgz .ci-package/prismcast.tgz
+
+      - name: Generate the CI Dockerfile from the upstream Dockerfile.
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          dockerfile = Path("Dockerfile").read_text()
+          original = "RUN npm install -g prismcast"
+          replacement = (
+              "COPY .ci-package/prismcast.tgz /tmp/prismcast.tgz\n"
+              "RUN npm install -g /tmp/prismcast.tgz && rm /tmp/prismcast.tgz"
+          )
+          if dockerfile.count(original) != 1:
+              raise SystemExit("Expected one PrismCast npm install step; review the upstream Dockerfile.")
+          Path("Dockerfile.ci").write_text(dockerfile.replace(original, replacement))
+          PY
+
       - name: Log in to GitHub Container Registry.
         uses: docker/login-action@v4
         with:
@@ -58,7 +88,11 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          file: Dockerfile.ci
           push: true
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           tags: |
             ghcr.io/${{ github.repository }}:${{ inputs.docker_tag || steps.version.outputs.VERSION }}
             ${{ github.event_name == 'release' && format('ghcr.io/{0}:latest', github.repository) || '' }}

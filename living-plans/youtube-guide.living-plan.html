@@ -38,7 +38,7 @@ const DATA = {
       "Never invent game assignments or times",
       "Leave the repository Dockerfile unchanged"
     ],
-    "whereWeAre": "Hidden-score game fix is published in the dev image. Live source verification includes Broncos; the running Unraid container needs one more update.",
+    "whereWeAre": "Corrected container is deployed. Forced XMLTV scan and Emby refresh succeeded; Emby guide visibly shows Jaguars at Broncos on CBS [2], channel 1116.",
     "glossary": [
       {
         "term": "XMLTV",
@@ -88,13 +88,7 @@ const DATA = {
       "details": "Image revision c9db4e1, successful Actions run 35537849979. Live deployment of this follow-up remains user action."
     }
   ],
-  "nextActions": [
-    {
-      "pri": 1,
-      "action": "Update the Unraid container again, then force a guide scan and refresh Emby",
-      "ref": "ghcr.io/ebg1223/prismcast:dev"
-    }
-  ],
+  "nextActions": [],
   "decisions": {
     "ruled": [
       {
@@ -105,6 +99,10 @@ const DATA = {
     "open": []
   },
   "updateLog": [
+    {
+      "date": "2026-09-20",
+      "note": "Verified Broncos listing end to end in deployed PrismCast and Emby guide after container update."
+    },
     {
       "date": "2026-09-20",
       "note": "Hidden-score fix passed CI and published. Verified public dev image revision c9db4e1."
@@ -491,6 +489,9 @@ function mdRender(md) {
 - Corrected source image revision `c9db4e12dcd2ad2816320c305b04781f6a32ccbd` published successfully in Actions run https://github.com/ebg1223/prismcast/actions/runs/35537849979.
 - Public GHCR manifest/config verified `ghcr.io/ebg1223/prismcast:dev` digest `sha256:21bcbefbae969415ae169442a141744aa5213deec51089d09ca57c0074bb8e8a` with that revision.
 - Running container still needs the follow-up update. After user updates, request `/xmltv.xml?refresh=true` and refresh Emby guide data. The last verified source extraction placed Broncos on CBS [3], but occurrences can shift when other games leave the live lineup.
+
+## 2026-09-20 Broncos deployment verified
+User updated the container. Forced GET /xmltv.xml?refresh=true returned HTTP 200 and Jacksonville Jaguars at Denver Broncos on NFL ST - CBS [2]. Clicked Emby Refresh Guide Data, opened the viewer's Live TV guide, and verified the visible program beside CBS [2], channel 1116. Earlier CBS game finished, shifting the occurrence from the previously observed CBS [3]. Six current program listings were returned. No playback or recording was started.
 </script>
 </body>
 </html>

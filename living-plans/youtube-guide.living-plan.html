@@ -38,7 +38,7 @@ const DATA = {
       "Never invent game assignments or times",
       "Leave the repository Dockerfile unchanged"
     ],
-    "whereWeAre": "Live extraction returned nine Sunday Ticket games with exact timestamps. XMLTV implementation and focused tests pass; container publication is next.",
+    "whereWeAre": "XMLTV code is published in the dev container. Emby now enables only nine Sunday Ticket feeds for PrismCast. Container update and XMLTV source setup remain on the live server.",
     "glossary": [
       {
         "term": "XMLTV",
@@ -72,18 +72,18 @@ const DATA = {
     {
       "id": "M3",
       "name": "Verify and publish",
-      "status": "in_progress",
-      "pct": 50,
-      "summary": "Test output and publish through Actions.",
+      "status": "done",
+      "pct": 100,
+      "summary": "Tests and CI passed; dev image published.",
       "plain": "Run focused tests and inspect real output. Publish the dev image after validation.",
-      "details": "Existing CI builds the checked-out source."
+      "details": "Commit 1e10cdc; Actions run 35536907716. Public image revision verified. See embedded runbook for digest and live Emby audit."
     }
   ],
   "nextActions": [
     {
       "pri": 1,
-      "action": "Publish validated source through GitHub Actions",
-      "ref": "CI workflow on codex/yttv-channel-occurrences"
+      "action": "Update PrismCast container in Unraid, then add /xmltv.xml as its Emby guide source",
+      "ref": "http://10.7.12.56:5589/xmltv.xml"
     }
   ],
   "decisions": {
@@ -96,6 +96,10 @@ const DATA = {
     "open": []
   },
   "updateLog": [
+    {
+      "date": "2026-09-20",
+      "note": "CI published dev image. Emby reload audit confirmed 9 Sunday Ticket channels enabled, 179 others disabled for PrismCast."
+    },
     {
       "date": "2026-09-20",
       "note": "Live nine-game extraction passed; 20 focused tests pass. Concurrency review finding fixed. Debug access restored."
@@ -438,6 +442,15 @@ function mdRender(md) {
 - Restored debug pattern to its original empty value using `curl -X POST --data-urlencode 'pattern=' http://10.7.12.56:5589/debug`. Temporary inspection pages closed.
 - Endpoint after deployment: `http://10.7.12.56:5589/xmltv.xml`. Add as an XMLTV source assigned to PrismCast in Emby. Initial scan may take up to one minute; subsequent requests cache for 15 minutes. `?refresh=true` forces extraction.
 - Recovery: remove this XMLTV source from Emby or roll back the container image if provider markup changes. Streaming integration remains independently usable. Do not alter the checked-in Dockerfile; Actions builds the fork using its generated Dockerfile.ci.
+
+## 2026-09-20 publication and Emby channel selection
+- Final `npm run prepublishOnly` passed without lint warnings. Focused tests total 21 passed, including the additional A/B/C concurrent selection regression.
+- Source commit `1e10cdc85de185e501bd072c595ba78b709a5f00` pushed to `codex/yttv-channel-occurrences`.
+- `gh workflow run ci.yml -R ebg1223/prismcast --ref codex/yttv-channel-occurrences -f docker_tag=dev`: Actions run https://github.com/ebg1223/prismcast/actions/runs/35536907716 succeeded, including both Node package checks and Docker publishing.
+- Anonymous GHCR manifest/config verification confirmed dev image revision 1e10cdc85de185e501bd072c595ba78b709a5f00 and digest `sha256:b21239dd7279a311627911b772d9208df6b8f287355cb76dd195cbd26bf8f968`.
+- User additionally requested disabling other channels in Emby for this tuner. Read PrismCast public HDHR lineup: 188 channels numbered 1000 through 1187. Used Emby channel checkboxes to disable 178 additional channels; A&E was already disabled. Did not change antenna tuner channels or PrismCast configuration.
+- Reloaded Emby and audited all 188 rendered PrismCast rows. Exactly 9 enabled: CBS [1]-[5] at 1115-1119 and FOX [1]-[4] at 1120-1123. Remaining 179 disabled. These settings persist across page reload.
+- Live container has not been updated by this session. The new /xmltv.xml endpoint and Emby XMLTV import still require container update and guide source setup. Rollback channel filtering by re-enabling desired rows in Emby Settings > Live TV > Channels.
 </script>
 </body>
 </html>

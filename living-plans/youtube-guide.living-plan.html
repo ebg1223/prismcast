@@ -38,7 +38,7 @@ const DATA = {
       "Never invent game assignments or times",
       "Leave the repository Dockerfile unchanged"
     ],
-    "whereWeAre": "Broncos omission traced to a hidden-score thumbnail linking to live instead of watch. Extractor now falls back to the row\u2019s explicit watch endpoint; validation and publication are in progress.",
+    "whereWeAre": "Hidden-score game fix is published in the dev image. Live source verification includes Broncos; the running Unraid container needs one more update.",
     "glossary": [
       {
         "term": "XMLTV",
@@ -81,18 +81,18 @@ const DATA = {
     {
       "id": "M4",
       "name": "Include hidden-score game feeds",
-      "status": "in_progress",
-      "pct": 50,
-      "summary": "Recover the actual Join live URL from row data.",
+      "status": "done",
+      "pct": 100,
+      "summary": "Broncos extraction verified; corrected image published.",
       "plain": "The Broncos game is present but its thumbnail does not link directly to playback.",
-      "details": "Live row navigationEndpoint.watchEndpoint.videoId verified; no restriction bypass or invented stream URL."
+      "details": "Image revision c9db4e1, successful Actions run 35537849979. Live deployment of this follow-up remains user action."
     }
   ],
   "nextActions": [
     {
       "pri": 1,
-      "action": "Verify live Broncos extraction and publish the corrected image",
-      "ref": "src/browser/tuning/youtubeTvGuide.ts"
+      "action": "Update the Unraid container again, then force a guide scan and refresh Emby",
+      "ref": "ghcr.io/ebg1223/prismcast:dev"
     }
   ],
   "decisions": {
@@ -105,6 +105,10 @@ const DATA = {
     "open": []
   },
   "updateLog": [
+    {
+      "date": "2026-09-20",
+      "note": "Hidden-score fix passed CI and published. Verified public dev image revision c9db4e1."
+    },
     {
       "date": "2026-09-20",
       "note": "User reported missing Broncos game. Found playable row excluded by thumbnail-only filtering; implementing targeted fallback."
@@ -481,6 +485,12 @@ function mdRender(md) {
 - Extended real-shape DOM test with the Broncos row and an unavailable live row. 13 guide/tuning tests passed.
 - Live production-function verification through the debug proxy returned Jacksonville Jaguars at Denver Broncos as NFL ST - CBS [3], start 1789934700000, end 1789945500000. There were seven program-bearing numbered feeds in this snapshot.
 - Temporary inspection pages were closed and debug pattern restored to empty. No Emby source URL change was saved.
+
+## 2026-09-20 hidden-score fix publication
+- Initial CI run 35537766788 rejected a test blank-line warning. Fixed the single blank line and verified targeted ESLint with `--max-warnings=0` plus the DOM test. CI is stricter than the local default lint warning limit.
+- Corrected source image revision `c9db4e12dcd2ad2816320c305b04781f6a32ccbd` published successfully in Actions run https://github.com/ebg1223/prismcast/actions/runs/35537849979.
+- Public GHCR manifest/config verified `ghcr.io/ebg1223/prismcast:dev` digest `sha256:21bcbefbae969415ae169442a141744aa5213deec51089d09ca57c0074bb8e8a` with that revision.
+- Running container still needs the follow-up update. After user updates, request `/xmltv.xml?refresh=true` and refresh Emby guide data. The last verified source extraction placed Broncos on CBS [3], but occurrences can shift when other games leave the live lineup.
 </script>
 </body>
 </html>

@@ -27,7 +27,21 @@ export function readYttvGuide(): YttvGuideChannel[] {
   for(const thumb of Array.from(document.querySelectorAll("ytu-endpoint.tenx-thumb[aria-label]"))) {
 
     const label = thumb.getAttribute("aria-label") ?? "";
-    const href = thumb.querySelector("a")?.getAttribute("href") ?? "";
+    const row = thumb.closest("ytu-epg-row");
+
+    let href = thumb.querySelector("a")?.getAttribute("href") ?? "";
+
+    // Hidden-score previews can link to "live" even though the row exposes a playable Join live destination.
+    if(href === "live") {
+
+      const rowData = property(property(row, "polymerController"), "data");
+      const videoId = property(property(property(rowData, "navigationEndpoint"), "watchEndpoint"), "videoId");
+
+      if((typeof videoId === "string") && /^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+
+        href = "watch/" + videoId;
+      }
+    }
 
     if(!label.startsWith("watch ") || !href.startsWith("watch/")) {
 
@@ -35,7 +49,6 @@ export function readYttvGuide(): YttvGuideChannel[] {
     }
 
     const programs: GuideProgram[] = [];
-    const row = thumb.closest("ytu-epg-row");
 
     for(const airing of Array.from(row?.querySelectorAll("ytu-epg-airing") ?? [])) {
 

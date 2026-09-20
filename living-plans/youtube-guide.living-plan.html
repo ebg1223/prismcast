@@ -38,7 +38,7 @@ const DATA = {
       "Never invent game assignments or times",
       "Leave the repository Dockerfile unchanged"
     ],
-    "whereWeAre": "User updated the container. Live XMLTV returns HTTP 200, and Emby automatically mapped all nine enabled Sunday Ticket channels to it.",
+    "whereWeAre": "Broncos omission traced to a hidden-score thumbnail linking to live instead of watch. Extractor now falls back to the row\u2019s explicit watch endpoint; validation and publication are in progress.",
     "glossary": [
       {
         "term": "XMLTV",
@@ -77,9 +77,24 @@ const DATA = {
       "summary": "Tests and CI passed; dev image published.",
       "plain": "Run focused tests and inspect real output. Publish the dev image after validation.",
       "details": "Commit 1e10cdc; Actions run 35536907716. Public image revision verified. See embedded runbook for digest and live Emby audit."
+    },
+    {
+      "id": "M4",
+      "name": "Include hidden-score game feeds",
+      "status": "in_progress",
+      "pct": 50,
+      "summary": "Recover the actual Join live URL from row data.",
+      "plain": "The Broncos game is present but its thumbnail does not link directly to playback.",
+      "details": "Live row navigationEndpoint.watchEndpoint.videoId verified; no restriction bypass or invented stream URL."
     }
   ],
-  "nextActions": [],
+  "nextActions": [
+    {
+      "pri": 1,
+      "action": "Verify live Broncos extraction and publish the corrected image",
+      "ref": "src/browser/tuning/youtubeTvGuide.ts"
+    }
+  ],
   "decisions": {
     "ruled": [
       {
@@ -90,6 +105,10 @@ const DATA = {
     "open": []
   },
   "updateLog": [
+    {
+      "date": "2026-09-20",
+      "note": "User reported missing Broncos game. Found playable row excluded by thumbnail-only filtering; implementing targeted fallback."
+    },
     {
       "date": "2026-09-20",
       "note": "Verified deployed endpoint, saved XMLTV source assigned only to PrismCast, and confirmed all nine automatic channel mappings in Emby."
@@ -454,6 +473,14 @@ function mdRender(md) {
 - User reported updating the container in Unraid. `curl --max-time 90 -sS -D /tmp/prismcast-deployed-guide-headers.txt http://10.7.12.56:5589/xmltv.xml -o /tmp/prismcast-deployed-guide.xml` returned HTTP 200. XML parsed successfully with 9 channels and 8 programs. FOX [4] had no program in the currently loaded guide; ended games had changed the streamable occurrence order.
 - Added Emby XmlTV source for the endpoint through its UI. Unchecked all-tuners and the physical HDHomeRun EXTEND, leaving only HD Homerun at 10.7.12.56:5004 selected. UI confirmed Settings saved and triggered guide refresh.
 - Verified all nine Sunday Ticket rows in Emby show `Mapped to [number] NFL ST - [network] [occurrence] - http://10.7.12.56:5589/xmltv.xml`. CBS [1]-[5] and FOX [1]-[4] remain enabled. Existing other guide sources were not deleted.
+
+## 2026-09-20 missing Broncos root cause
+- Forced `/xmltv.xml?refresh=true` and refreshed Emby. Listings changed as completed games left the live lineup, but Broncos remained absent. User clarified that the missing Broncos game was the issue, not simply clock lag.
+- Live DOM investigation found Jacksonville Jaguars at Denver Broncos in a Sunday Ticket CBS row. Its thumbnail anchor was `live`, not `watch/...`. Row backing data exposed `navigationEndpoint.watchEndpoint.videoId`; the airing menu offered Join live and Start from beginning. A spoilerModeBadge explained the preview was hidden by the account's hide-scores preference. It was not an unavailable or blocked game.
+- Changed readYttvGuide to accept a `live` thumbnail only when the row explicitly supplies a valid watchEndpoint video ID. `browse` upcoming entries and `live` entries without a playable destination remain excluded. Tuning and schedule extraction share this path.
+- Extended real-shape DOM test with the Broncos row and an unavailable live row. 13 guide/tuning tests passed.
+- Live production-function verification through the debug proxy returned Jacksonville Jaguars at Denver Broncos as NFL ST - CBS [3], start 1789934700000, end 1789945500000. There were seven program-bearing numbered feeds in this snapshot.
+- Temporary inspection pages were closed and debug pattern restored to empty. No Emby source URL change was saved.
 </script>
 </body>
 </html>

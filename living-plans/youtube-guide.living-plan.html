@@ -38,7 +38,7 @@ const DATA = {
       "Never invent game assignments or times",
       "Leave the repository Dockerfile unchanged"
     ],
-    "whereWeAre": "XMLTV code is published in the dev container. Emby now enables only nine Sunday Ticket feeds for PrismCast. Container update and XMLTV source setup remain on the live server.",
+    "whereWeAre": "User updated the container. Live XMLTV returns HTTP 200, and Emby automatically mapped all nine enabled Sunday Ticket channels to it.",
     "glossary": [
       {
         "term": "XMLTV",
@@ -79,13 +79,7 @@ const DATA = {
       "details": "Commit 1e10cdc; Actions run 35536907716. Public image revision verified. See embedded runbook for digest and live Emby audit."
     }
   ],
-  "nextActions": [
-    {
-      "pri": 1,
-      "action": "Update PrismCast container in Unraid, then add /xmltv.xml as its Emby guide source",
-      "ref": "http://10.7.12.56:5589/xmltv.xml"
-    }
-  ],
+  "nextActions": [],
   "decisions": {
     "ruled": [
       {
@@ -96,6 +90,10 @@ const DATA = {
     "open": []
   },
   "updateLog": [
+    {
+      "date": "2026-09-20",
+      "note": "Verified deployed endpoint, saved XMLTV source assigned only to PrismCast, and confirmed all nine automatic channel mappings in Emby."
+    },
     {
       "date": "2026-09-20",
       "note": "CI published dev image. Emby reload audit confirmed 9 Sunday Ticket channels enabled, 179 others disabled for PrismCast."
@@ -451,6 +449,11 @@ function mdRender(md) {
 - User additionally requested disabling other channels in Emby for this tuner. Read PrismCast public HDHR lineup: 188 channels numbered 1000 through 1187. Used Emby channel checkboxes to disable 178 additional channels; A&E was already disabled. Did not change antenna tuner channels or PrismCast configuration.
 - Reloaded Emby and audited all 188 rendered PrismCast rows. Exactly 9 enabled: CBS [1]-[5] at 1115-1119 and FOX [1]-[4] at 1120-1123. Remaining 179 disabled. These settings persist across page reload.
 - Live container has not been updated by this session. The new /xmltv.xml endpoint and Emby XMLTV import still require container update and guide source setup. Rollback channel filtering by re-enabling desired rows in Emby Settings > Live TV > Channels.
+
+## 2026-09-20 live deployment and guide mapping complete
+- User reported updating the container in Unraid. `curl --max-time 90 -sS -D /tmp/prismcast-deployed-guide-headers.txt http://10.7.12.56:5589/xmltv.xml -o /tmp/prismcast-deployed-guide.xml` returned HTTP 200. XML parsed successfully with 9 channels and 8 programs. FOX [4] had no program in the currently loaded guide; ended games had changed the streamable occurrence order.
+- Added Emby XmlTV source for the endpoint through its UI. Unchecked all-tuners and the physical HDHomeRun EXTEND, leaving only HD Homerun at 10.7.12.56:5004 selected. UI confirmed Settings saved and triggered guide refresh.
+- Verified all nine Sunday Ticket rows in Emby show `Mapped to [number] NFL ST - [network] [occurrence] - http://10.7.12.56:5589/xmltv.xml`. CBS [1]-[5] and FOX [1]-[4] remain enabled. Existing other guide sources were not deleted.
 </script>
 </body>
 </html>

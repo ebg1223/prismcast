@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+  * Fix: YouTube TV channels with repeated guide names, including NFL Sunday Ticket, can be selected individually. Use Channel Selectors such as `NFL ST - FOX [1]`, `NFL ST - FOX [2]`, or `NFL ST - CBS [3]`. Numbers follow guide order and may refer to different games when that order changes. A name without a number selects the first stream.
+
 ## 1.12.1 (2026-09-04)
   * Improvement: PrismCast stays out of your way while it captures - capture tabs open in the background of one shared Chrome window, your own tab stays selected and is handed back whenever a tune has to bring a capture tab forward for a moment, a capture tab you click on snaps back to its capture view within about a second, and channel discovery renders its guide in a window of its own so the shared window can stay minimized. The window also keeps whatever size and placement you last gave it.
   * Improvement: replacing a hung tab no longer puts the recording at risk - the replacement is built and tuned first while the old capture keeps running, so a replacement that fails leaves your recording exactly where it was.

@@ -122,6 +122,55 @@ afterEach(() => {
 
 describe("youtubeGrid tune flow", () => {
 
+  test("preserves and tunes each Sunday Ticket occurrence, ignoring repeated thumbnails", async () => {
+
+    const rows = [ "FOX", "CBS" ].flatMap((network) => Array.from({ length: 6 }, (_, index) => ({
+
+      name: "NFL ST - " + network,
+      watchPath: "watch/" + network.toLowerCase() + String(index + 1)
+    })));
+    const guide = makeGuidePage(rows.flatMap((row) => [ row, row ]));
+    const discovered = await yttvProvider.discoverChannels(guide.page);
+
+    assert.equal(discovered.length, 12);
+
+    /* eslint-disable no-await-in-loop -- Tunes share one page and cache, so each navigation must finish before the next. */
+    for(const network of [ "FOX", "CBS" ]) {
+
+      for(let occurrence = 1; occurrence <= 6; occurrence++) {
+
+        const selector = "NFL ST - " + network + " [" + String(occurrence) + "]";
+        const url = "https://tv.youtube.com/watch/" + network.toLowerCase() + String(occurrence);
+
+        assert.ok(discovered.some((channel) => channel.channelSelector === selector));
+        assert.equal(await yttvProvider.strategy.resolveDirectUrl?.(selector.toLowerCase(), guide.page), url);
+        assert.equal(yttvProvider.exportDurableLineup?.()?.find((channel) => channel.channelSelector === selector)?.watchUrl, url);
+        assert.equal((await yttvProvider.strategy.execute(guide.page, makeYttvProfile(selector))).success, true);
+        assert.equal(guide.navigations.at(-1), url);
+      }
+
+      assert.equal(await yttvProvider.strategy.resolveDirectUrl?.("NFL ST - " + network, guide.page),
+        "https://tv.youtube.com/watch/" + network.toLowerCase() + "1");
+    }
+
+    /* eslint-enable no-await-in-loop */
+
+    assert.equal((await yttvProvider.strategy.execute(guide.page, makeYttvProfile("NFL ST - FOX [7]"))).success, false);
+    assert.equal(guide.navigations.length, 12, "an unavailable occurrence must not tune another game");
+
+    yttvProvider.strategy.invalidateDirectUrl?.("NFL ST - FOX [2]");
+    assert.equal(await yttvProvider.strategy.resolveDirectUrl?.("NFL ST - FOX [2]", guide.page), null);
+
+    guide.setLineup([
+      { name: "NFL ST - FOX", watchPath: "watch/new-fox1" },
+      { name: "NFL ST - FOX", watchPath: "watch/new-fox2" }
+    ]);
+    assert.equal((await yttvProvider.strategy.execute(guide.page, makeYttvProfile("NFL ST - FOX [2]"))).success, true);
+    assert.equal(guide.navigations.at(-1), "https://tv.youtube.com/watch/new-fox2");
+    assert.equal(await yttvProvider.strategy.resolveDirectUrl?.("NFL ST - FOX [6]", guide.page), null);
+    assert.equal(yttvProvider.exportDurableLineup?.()?.length, 2, "refresh drops occurrences that have left the guide");
+  });
+
   test("reads the guide in one pass, resolves the target channel, and navigates to its watch URL", async () => {
 
     const guide = makeGuidePage(FULL_LINEUP);

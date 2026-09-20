@@ -22,7 +22,7 @@ interface YttvChannelEntry {
   watchUrl: string;
 }
 
-// Unified channel cache for YouTube TV. Maps lowercased guide names (e.g., "cnn", "nbc 5", "espn") to their combined discovery and tuning data. Populated during
+// Unified channel cache for YouTube TV. Maps lowercased guide selectors (including numbered occurrences) to discovery and tuning data. Populated during
 // the first tune (when the strategy enumerates all ~256 channels from the non-virtualized EPG grid) or the first discovery call. Both tuning (via findWatchUrl) and
 // discovery (via getCachedChannels / discoverYttvChannels) read from this single cache. Cleared on browser disconnect via clearYttvCache().
 const yttvCache = createProviderChannelCache<YttvChannelEntry>((entry) => entry.discovered);
@@ -214,32 +214,64 @@ function populateYttvChannelCache(rawChannels: { name: string; watchPath: string
     }
   }
 
+  const groups = new Map<string, typeof rawChannels>();
+
   for(const ch of rawChannels) {
 
-    const entry: DiscoveredChannel = { channelSelector: ch.name, name: ch.name };
+    const name = ch.name.toLowerCase();
+    const channels = groups.get(name) ?? [];
 
-    // Detect affiliates via prefix+digit pattern, but only for known broadcast networks. This prevents false positives like "ESPN 2" or "Fox Sports 1"
-    // from being tagged as affiliates.
-    const prefixMatch = YTTV_AFFILIATE_PATTERN.exec(ch.name)?.[1];
+    if(!channels.some((channel) => channel.watchPath === ch.watchPath)) {
 
-    if(prefixMatch && YTTV_BROADCAST_NETWORKS.has(prefixMatch.toLowerCase())) {
-
-      entry.affiliate = prefixMatch.toUpperCase();
-      entry.channelSelector = entry.affiliate;
-    } else {
-
-      // Detect affiliates via CHANNEL_ALTERNATES (e.g., "WGN" -> affiliate of "CW", "WTTW" -> affiliate of "PBS"). Only checked when prefix+digit didn't
-      // match, since the two mechanisms target different affiliate naming patterns.
-      const altNetwork = alternateToNetwork.get(ch.name.toLowerCase());
-
-      if(altNetwork) {
-
-        entry.affiliate = altNetwork;
-        entry.channelSelector = altNetwork;
-      }
+      channels.push(ch);
     }
 
-    yttvCache.map.set(ch.name.toLowerCase(), { discovered: entry, watchUrl: YOUTUBE_TV_BASE_URL + "/" + ch.watchPath });
+    groups.set(name, channels);
+  }
+
+  for(const [ name, channels ] of groups) {
+
+    for(const [ index, ch ] of channels.entries()) {
+
+      const entry: DiscoveredChannel = { channelSelector: ch.name, name: ch.name };
+
+      // Detect affiliates via prefix+digit pattern, but only for known broadcast networks. This prevents false positives like "ESPN 2" or "Fox Sports 1"
+      // from being tagged as affiliates.
+      const prefixMatch = YTTV_AFFILIATE_PATTERN.exec(ch.name)?.[1];
+
+      if(prefixMatch && YTTV_BROADCAST_NETWORKS.has(prefixMatch.toLowerCase())) {
+
+        entry.affiliate = prefixMatch.toUpperCase();
+        entry.channelSelector = entry.affiliate;
+      } else {
+
+        // Detect affiliates via CHANNEL_ALTERNATES (e.g., "WGN" -> affiliate of "CW", "WTTW" -> affiliate of "PBS"). Only checked when prefix+digit didn't
+        // match, since the two mechanisms target different affiliate naming patterns.
+        const altNetwork = alternateToNetwork.get(ch.name.toLowerCase());
+
+        if(altNetwork) {
+
+          entry.affiliate = altNetwork;
+          entry.channelSelector = altNetwork;
+        }
+      }
+
+      // Number distinct streams in guide order. A repeated thumbnail for the same stream is not another occurrence.
+      if(channels.length > 1) {
+
+        entry.channelSelector = ch.name + " [" + String(index + 1) + "]";
+        entry.name = entry.channelSelector;
+      }
+
+      const cached = { discovered: entry, watchUrl: YOUTUBE_TV_BASE_URL + "/" + ch.watchPath };
+
+      yttvCache.map.set(channels.length > 1 ? entry.channelSelector.toLowerCase() : name, cached);
+
+      if(index === 0) {
+
+        yttvCache.map.set(name, cached);
+      }
+    }
   }
 
   // The read this pass was built from covered the entire grid, so what sits in the cache at this point is the complete lineup and warm reads can be served
@@ -425,7 +457,8 @@ export const yttvProvider: ProviderModule = {
 
     category: "multiChannel",
     channelSelection: { strategy: "youtubeGrid" },
-    description: "YouTube TV with EPG grid channel selection. Set Channel Selector to the channel name as shown in the guide (e.g., CNN, ESPN, NBC).",
+    description: "YouTube TV with EPG grid channel selection. Set Channel Selector to the guide name (e.g., CNN, ESPN, NBC). " +
+      "For repeated names, append [1], [2], etc. in guide order (e.g., NFL ST - FOX [2]). The bare name selects the first stream.",
     extends: "fullscreenApi",
     selectReadyVideo: true,
     summary: "YouTube TV (guide grid, needs selector)"

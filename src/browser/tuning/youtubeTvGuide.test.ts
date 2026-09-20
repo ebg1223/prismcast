@@ -44,6 +44,7 @@ test("reads absolute program times from each stream's own row, including truncat
 
   // Observed Broncos row: hidden-score thumbnail links to live, but the row's Join live destination is a watch endpoint.
   Object.defineProperty(window.document.querySelectorAll("ytu-epg-row")[3], "polymerController", {
+
     value: { data: { navigationEndpoint: { watchEndpoint: { videoId: "xHCA59axZ3M" } } } }
   });
 
